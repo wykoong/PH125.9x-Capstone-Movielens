@@ -17,6 +17,18 @@ library(data.table)
 dl <- tempfile()
 download.file("http://files.grouplens.org/datasets/movielens/ml-10m.zip", dl)
 
+
+library(R.utils)
+library(formattable)
+
+file_ratings <- unzip(dl, "ml-10M100K/ratings.dat")
+file_movies <- unzip(dl, "ml-10M100K/movies.dat")
+comma(countLines("ml-10M100K/ratings.dat")[1], digits=0)
+comma(countLines("ml-10M100K/movies.dat")[1], digits=0)
+comma(file.size(file_ratings), digits=0)
+comma(file.size(file_movies), digits=0)
+
+
 ratings <- fread(text = gsub("::", "\t", readLines(unzip(dl, "ml-10M100K/ratings.dat"))),
                  col.names = c("userId", "movieId", "rating", "timestamp"))
 
@@ -42,6 +54,7 @@ removed <- anti_join(temp, validation)
 edx <- rbind(edx, removed)
 
 rm(dl, ratings, movies, test_index, temp, movielens, removed)
+
 
 #---------
 
@@ -95,4 +108,4 @@ edx_test <- edx_test %>%
 rm(edx,test_index)
 
 
-
+############################

@@ -1,3 +1,6 @@
+
+# THIS SCRIPT CONTAINS PREDICTION USING REGULARISE
+
 #----------------------------------
 # 3.0 let's get started
 
@@ -185,12 +188,21 @@ rellapse_yrrelease_user_movie_rmse <- sapply(rellapse_yrrelease_user_movie_lambd
     group_by(yr_lapse) %>%
     summarise(rellapse_effect = sum(rating-mu-movie_effect-user_effect-yrrelease_effect) / (n()+lambda))
   
+  yrrating_sums <- edx_train %>%
+    inner_join(user_sums, by="userId") %>%
+    inner_join(movie_sums, by="movieId") %>%
+    inner_join(yrrelease_sums, by="yr_release") %>%
+    inner_join(rellapse_sums, by="yr_lapse") %>%
+    group_by(yr_rating) %>%
+    summarise(yrrating_effect = sum(rating-mu-movie_effect-user_effect-yrrelease_effect-rellapse_effect) / (n()+lambda))
+  
   predicted_rating <- edx_test %>%
     inner_join(user_sums, by='userId') %>%
     inner_join(movie_sums, by="movieId") %>%
     inner_join(yrrelease_sums, by="yr_release") %>%
     inner_join(rellapse_sums, by="yr_lapse") %>%
-    mutate(predicted = mu + user_effect + movie_effect + yrrelease_effect + rellapse_effect) %>%
+    inner_join(yrrating_sums, by="yr_rating") %>%
+    mutate(predicted = mu + user_effect + movie_effect + yrrelease_effect + rellapse_effect + yrrating_effect) %>%
     pull(predicted)
   return(RMSE(predicted_rating,edx_test$rating))
 })
@@ -213,13 +225,13 @@ rellapse_yrrelease_user_movie_rmse=0.8635047
 # 
 
 
-#----------------- lets get the lambda
+#----------------- all-IN
 
 options(dplyr.summarise.inform = FALSE)
 
-yrate_ylapse_yrelease_u_m_lambdas <- seq(0,10,0.25)
+all_in_lambdas <- seq(0,10,0.25)
 
-yrate_ylapse_yrelease_u_m_rmse <- sapply(yrate_ylapse_yrelease_u_m_lambdas, function(lambda){
+all_in_rmse <- sapply(all_in_lambdas, function(lambda){
   movie_sums <- edx_train %>%
     group_by(movieId) %>%
     summarise(movie_effect = sum(rating-mu) / (n()+lambda)) %>%
@@ -262,13 +274,13 @@ yrate_ylapse_yrelease_u_m_rmse <- sapply(yrate_ylapse_yrelease_u_m_lambdas, func
   return(RMSE(predicted_rating,edx_test$rating))
 })
 
-qplot(yrate_ylapse_yrelease_u_m_lambdas,yrate_ylapse_yrelease_u_m_rmse)
-yrate_ylapse_yrelease_u_m_lambdas[which.min(yrate_ylapse_yrelease_u_m_rmse)]
+qplot(all_in_lambdas,all_in_rmse)
+all_in_lambdas[which.min(all_in_rmse)]
 
 # based on above plot, use lambdas = 5.0
 # based on lambdas, the RMSE of year lapse user movie  effect with regularization is
-yrate_ylapse_yrelease_u_m_lambda=5.0
-yrate_ylapse_yrelease_u_m_rmse=0.8634774
+all_in_lambdas=5.0
+all_in_rmse=0.8634774
 
 #---------------------- FINAL SCRIPTS
 
@@ -289,30 +301,29 @@ dataset_test <- dataset_test %>%
 
 
 mu <- mean(edx_train$rating)
-
 movie_sums <- edx_train %>%
   group_by(movieId) %>%
   summarise(movie_effect = sum(rating-mu) / (n()+final_lambda)) %>%
   select(movieId,movie_effect)
-  
+
 user_sums <- edx_train %>%
   inner_join(movie_sums, by="movieId") %>%
   group_by(userId) %>%
   summarise(user_effect = sum(rating-mu-movie_effect) / (n()+final_lambda))
-  
+
 yrrelease_sums <- edx_train %>%
   inner_join(user_sums, by="userId") %>%
   inner_join(movie_sums, by="movieId") %>%
   group_by(yr_release) %>%
   summarise(yrrelease_effect = sum(rating-mu-movie_effect-user_effect) / (n()+final_lambda))
-  
+
 rellapse_sums <- edx_train %>%
   inner_join(user_sums, by="userId") %>%
   inner_join(movie_sums, by="movieId") %>%
   inner_join(yrrelease_sums, by="yr_release") %>%
   group_by(yr_lapse) %>%
   summarise(rellapse_effect = sum(rating-mu-movie_effect-user_effect-yrrelease_effect) / (n()+final_lambda))
-  
+
 yrrate_sums <- edx_train %>%
   inner_join(user_sums, by="userId") %>%
   inner_join(movie_sums, by="movieId") %>%
@@ -320,8 +331,8 @@ yrrate_sums <- edx_train %>%
   inner_join(rellapse_sums, by="yr_lapse") %>%
   group_by(yr_rating) %>%
   summarise(yrrate_effect = sum(rating-mu-movie_effect-user_effect-yrrelease_effect-rellapse_effect) / (n()+final_lambda))
-  
-predicted_rating <- dataset_test %>%
+
+predicted_rating <- edx_test %>%
   inner_join(user_sums, by='userId') %>%
   inner_join(movie_sums, by="movieId") %>%
   inner_join(yrrelease_sums, by="yr_release") %>%
@@ -329,7 +340,7 @@ predicted_rating <- dataset_test %>%
   inner_join(yrrate_sums, by="yr_rating") %>%
   mutate(predicted = mu + user_effect + movie_effect + yrrelease_effect + rellapse_effect + yrrate_effect) %>%
   pull(predicted)
-  
+
 RMSE(predicted_rating,dataset_test$rating)
   
 # ------------ validation RMSE = 0.8645436
