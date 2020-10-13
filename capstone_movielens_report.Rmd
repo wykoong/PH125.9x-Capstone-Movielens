@@ -1,7 +1,7 @@
 ---
 title: 'HarvardX (PH125.9x) - Data Science: Capstone - MovieLens Project'
 author: "Wayne Koong Wah Yan"
-date: "10/9/2020"
+date: "10/13/2020"
 output: pdf_document
 ---
 
@@ -125,7 +125,7 @@ Root mean squared error is similar to mean squared error and give more weight to
 
 
 
-## 3.2 Processes & Tehniques
+## 3.2 Processes & Techniques
 OSEMN Framework process is followed in this project to ensure standardize procedures and good data organization that increase the probability of getting accurate outcome. In the following sections, I am executing the MovieLens modeling following the OSEMN Framework.
 
 ### 3.2.1 Step1 Obtain Data
@@ -434,6 +434,18 @@ edx %>% group_by(yr_lapse) %>%
   ylab("Number of Rating(Log10)") + theme_minimal()
 ```
 
+Plotting year lapse against average rating give an interesting fact. There's a trend reversal when yr_lapse = 10, users tend to rate movies lower yearly from year 1 toward year 10, and increase rating from year 11 onward. This could be due to the fact that, users perceived movie released 10 years or above as classical movie and only best movie are watched and reviewed.
+
+``` {r yr_lapse_rating_chart}
+edx %>% group_by(yr_lapse) %>% summarise(m=mean(rating), n=n()) %>%
+  ggplot(aes(yr_lapse, m)) + geom_point(aes(color=log10(n))) + theme_minimal() + 
+  scale_color_gradient(low="green", high="darkred") + xlab("Year Lapse") +
+  ylab("Average Rating") + ggtitle("Averating Rating by Year Lapse") + 
+  labs(color = "Number of Rating (log10)") +
+  theme(legend.position = "bottom") + geom_vline(xintercept = c(1,10),linetype=2)
+
+```
+  
 
 ##### 3.2.3.2.2 Users & Movies\
 According to Principal Component Analysis, I notice that users and movies are 2 most important variants:
@@ -465,7 +477,6 @@ edx %>% filter(userId %in% users) %>%
 abline(h=0:100+0.5, v=0:100+0.5, col = "grey")
 title("User x Movie Matrix")
 ```
-
 
 ### 3.2.4 Step4 Model Data
 #### 3.2.4.1 Data Preparation\
@@ -499,7 +510,7 @@ I am modeling movielens dataset first by calculating the mean from the entire da
 
 The objective of modeling is to achieve RMSE below 0.8649
 ``` {r result_target}
-result <- tibble(Method = "Project Target", RMSE = 0.8649)
+result <- tibble(Method = "Project Target", RMSE = 0.86490)
 result %>% knitr::kable(caption="RMSE Result")
 ```
 
@@ -514,7 +525,7 @@ Based on edx_traing dataset, the mean and RMSE of this estimation calculated usi
 ``` {r calculate_mu}
 mu <- mean(edx_train$rating)
 mu_rmse <- RMSE(edx_test$rating,mu)
-result <- rbind(result, c(Method = "Mean", RMSE = mu_rmse))
+result <- rbind(result, c(Method = "Mean", RMSE = round(mu_rmse,5)))
 result %>% knitr::kable(caption="RMSE Result")
 ```
 
@@ -556,8 +567,10 @@ tibble(lambda = movie_lambdas, RMSE = movie_rmses) %>%
 Based on above chart, the best $\lambda$ value for predicting regularised movie effect is `r movie_lambdas[which.min(movie_rmses)]` which give the RMSE value `r min(movie_rmses)`.
 
 ``` {r result_movie_rmse}
+rmse_movie <- min(movie_rmses)
+lambda_movie <- movie_lambdas[which.min(movie_rmses)]
 result <- rbind(result, c(Method = "Regularised Movie", 
-                          RMSE = min(movie_rmses)))
+                          RMSE = round(rmse_movie,5)))
 result %>% knitr::kable(caption="RMSE Result")
 ```
 
@@ -604,8 +617,11 @@ tibble(lambda = user_movie_lambdas, RMSE = user_movie_rmses) %>%
 Based on above chart, `r user_movie_lambdas[which.min(user_movie_rmses)]` is the best $\lambda$ which give RMSE value `r min(user_movie_rmses)`.
 
 ``` {r result_user_movie_rmse}
+rmse_usermovie <- min(user_movie_rmses)
+lambda_usermovie <- user_movie_lambdas[which.min(user_movie_rmses)]
+
 result <- rbind(result, c(Method = "Regularised User Movie", 
-                          RMSE = min(user_movie_rmses)))
+                          RMSE = round(rmse_usermovie,5)))
 result %>% knitr::kable(caption="RMSE Result")
 ```
 
@@ -676,7 +692,10 @@ tibble(lambda = all_in_lambdas, RMSE = all_in_rmse) %>%
 According to above chart, the best $\lambda$ value for predicting by regularised all variant effect is `r all_in_lambdas[which.min(all_in_rmse)]` which give the RMSE value `r min(all_in_rmse)`.
 
 ``` {r result_all_variants}
-result <- rbind(result, c(Method = "Regularised All Variants", RMSE = min(all_in_rmse)))
+rmse_all_in <- min(all_in_rmse)
+lambda_all_in <- all_in_lambdas[which.min(all_in_rmse)]
+
+result <- rbind(result, c(Method = "Regularised All Variants", RMSE = round(rmse_all_in,5)))
 result %>% knitr::kable(caption="RMSE Result")
 ```
 
@@ -824,7 +843,7 @@ validation_rmse <- RMSE(predicted_rating,validation$rating)
 The script takes approximate 18 minutes to execute. With $\lambda$ value at 5.0, the validation dataset RMSE is calculated as `r validation_rmse`, which satisfied the project goal.
 
 ``` {r result_all_variants_calculate}
-result <- rbind(result, c(Method = "Validation", RMSE = validation_rmse))
+result <- rbind(result, c(Method = "Validation", RMSE = round(validation_rmse,5)))
 result %>% knitr::kable(caption="RMSE Result")
 ```
 
